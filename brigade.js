@@ -134,3 +134,4 @@ events.on("exec", test);
 events.on("check_suite:requested", checkRequested);
 events.on("check_suite:rerequested", checkRequested);
 events.on("check_run:rerequested", checkRequested);
+console.log('hi!')
