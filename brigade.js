@@ -85,7 +85,7 @@ function test() {
 
 function checkRequested(e, p) {
   console.log("check requested")
-  console.log(e.payload)
+  const gh = JSON.parse(e.payload);
   // Common configuration
   const env = {
     CHECK_PAYLOAD: e.payload,
@@ -94,7 +94,7 @@ function checkRequested(e, p) {
   }
 
   var tester = new TestJob(`${projectName}-test`)
-  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, tag, "/src", project.secrets.acrName, project.secrets.acrToken, project.secrets.acrTenant);
+  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", project.secrets.acrName, project.secrets.acrToken, project.secrets.acrTenant);
 
   // For convenience, we'll create three jobs: one for each GitHub Check
   // stage.
