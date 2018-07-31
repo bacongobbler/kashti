@@ -9,6 +9,7 @@ class TestJob extends Job {
     this.tasks = [
       "cd /src",
       "yarn install",
+      "yarn global add @angular/cli",
       "ng lint",
       "ng test --single-run",
     ];
@@ -21,6 +22,7 @@ class E2eJob extends Job {
     this.tasks = [
       "cd /src",
       "yarn install",
+      "yarn global add @angular/cli",
       "ng e2e"
     ];
   }
@@ -122,7 +124,7 @@ function checkRequested(e, p) {
     return end.run()
   }).catch((err) => {
     // In this case, we mark the ending failed.
-    end.env.CHECK_CONCLUSION = "failed"
+    end.env.CHECK_CONCLUSION = "failure"
     end.env.CHECK_SUMMARY = "Build failed"
     end.env.CHECK_TEXT = `Error: ${err}`
     return end.run()
