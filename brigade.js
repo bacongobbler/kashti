@@ -94,7 +94,7 @@ function checkRequested(e, p) {
   }
 
   var tester = new TestJob(`${projectName}-test`)
-  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", project.secrets.acrName, project.secrets.acrToken, project.secrets.acrTenant);
+  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", p.secrets.acrName, p.secrets.acrToken, p.secrets.acrTenant);
 
   // For convenience, we'll create three jobs: one for each GitHub Check
   // stage.
