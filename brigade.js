@@ -107,6 +107,7 @@ function checkRequested(e, p) {
 
   const endTester = new Job("end-test-run", checkRunImage)
   endTester.env = env
+  endTester.env.CHECK_NAME = startTester.env.CHECK_NAME
   endTester.env.CHECK_TITLE = startTester.env.CHECK_TITLE
 
   const startReleaser = new Job("start-release-run", checkRunImage)
@@ -114,9 +115,10 @@ function checkRequested(e, p) {
   startReleaser.env.CHECK_NAME = "Docker Image Tests"
   startReleaser.env.CHECK_SUMMARY = "In progress, please wait..."
 
-  const endRelease = new Job("end-release-run", checkRunImage)
-  endRelease.env = env
-  endRelease.env.CHECK_TITLE = startTester.env.CHECK_TITLE
+  const endReleaser = new Job("end-release-run", checkRunImage)
+  endReleaser.env = env
+  endReleaser.env.CHECK_NAME = startReleaser.env.CHECK_NAME
+  endReleaser.env.CHECK_TITLE = startReleaser.env.CHECK_TITLE
 
   Group.runEach([startTester, tester])
     .then((result) => {
