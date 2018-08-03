@@ -93,7 +93,6 @@ function checkRequested(e, p) {
   const env = {
     CHECK_PAYLOAD: e.payload,
     CHECK_NAME: "Chart Tester",
-    CHECK_TITLE: "Lint all Helm Charts",
   }
 
   var tester = new TestJob(`${projectName}-test`)
@@ -101,36 +100,51 @@ function checkRequested(e, p) {
 
   // For convenience, we'll create three jobs: one for each GitHub Check
   // stage.
-  const start = new Job("start-run", checkRunImage)
+  var start = new Job("start-run", checkRunImage)
   start.env = env
+  start.env.CHECK_TITLE = "Unit tests"
   start.env.CHECK_SUMMARY = "Beginning test run"
 
-  const end = new Job("end-run", checkRunImage)
+  var end = new Job("end-run", checkRunImage)
   end.env = env
+  end.env.CHECK_TITLE = start.env.CHECK_TITLE
 
-  // Now we run the jobs in order:
-  // - Notify GitHub of start
-  // - Run the test
-  // - Notify GitHub of completion
-  //
-  // On error, we catch the error and notify GitHub of a failure.
-  Group.runAll([start, tester, releaser])
-    .then((result) => {
-      end.env.CHECK_CONCLUSION = "success"
-      end.env.CHECK_SUMMARY = "Build completed"
-      end.env.CHECK_TEXT = result.toString()
-      return end.run()
-    }).catch((err) => {
-      // In this case, we mark the ending failed.
-      end.env.CHECK_CONCLUSION = "failure"
-      end.env.CHECK_SUMMARY = "Build failed"
-      end.env.CHECK_TEXT = `Error: ${JSON.stringify(err)}`
-      return end.run()
-    })
+  // Run unit tests
+  try {
+    Group.runEach([start, tester])
+    end.env.CHECK_CONCLUSION = "success"
+    end.env.CHECK_SUMMARY = "Build completed"
+    end.env.CHECK_TEXT = result.toString()
+    end.run()
+  } catch (e) {
+    // In this case, we mark the ending failed.
+    end.env.CHECK_CONCLUSION = "failure"
+    end.env.CHECK_SUMMARY = "Build failed"
+    end.env.CHECK_TEXT = `${err}`
+    return end.run()
+  }
+
+  start.env.CHECK_TITLE = "Build Docker image"
+  start.env.CHECK_SUMMARY = "Beginning test run"
+  end.env.CHECK_TITLE = start.env.CHECK_TITLE
+
+  // Run docker image build tests
+  try {
+    Group.runEach([start, releaser])
+    end.env.CHECK_CONCLUSION = "success"
+    end.env.CHECK_SUMMARY = "Build completed"
+    end.env.CHECK_TEXT = result.toString()
+    end.run()
+  } catch (e) {
+    // In this case, we mark the ending failed.
+    end.env.CHECK_CONCLUSION = "failure"
+    end.env.CHECK_SUMMARY = "Build failed"
+    end.env.CHECK_TEXT = `${err}`
+    return end.run()
+  }
 }
 
 events.on("exec", test);
-
 events.on("check_suite:requested", checkRequested);
 events.on("check_suite:rerequested", checkRequested);
 events.on("check_run:rerequested", checkRequested);
