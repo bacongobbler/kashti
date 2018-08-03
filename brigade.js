@@ -116,12 +116,15 @@ function checkRequested(e, p) {
   // - Notify GitHub of completion
   //
   // On error, we catch the error and notify GitHub of a failure.
-  Group.runAll([start, tester, releaser])
-    .then((result) => {
-      end.env.CHECK_CONCLUSION = "success"
-      end.env.CHECK_SUMMARY = "Build completed"
-      end.env.CHECK_TEXT = result.toString()
-      return end.run()
+  start.run()
+    .then(() => {
+      Group.runAll([tester, releaser])
+        .then((result) => {
+          end.env.CHECK_CONCLUSION = "success"
+          end.env.CHECK_SUMMARY = "Build completed"
+          end.env.CHECK_TEXT = result.toString()
+          return end.run()
+        })
     }).catch((err) => {
       // In this case, we mark the ending failed.
       end.env.CHECK_CONCLUSION = "failure"
