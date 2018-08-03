@@ -153,4 +153,4 @@ events.on("exec", test);
 events.on("check_suite:requested", checkRequested);
 events.on("check_suite:rerequested", checkRequested);
 events.on("check_run:rerequested", checkRequested);
-console.log('hit me baby one more time')
+console.log('hit me baby one more time!')
