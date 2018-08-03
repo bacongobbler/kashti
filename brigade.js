@@ -29,21 +29,22 @@ class E2eJob extends Job {
 }
 
 class ACRBuildJob extends Job {
-  constructor(name, img, tag, dir, registry, token, tenant) {
+  constructor(name, img, tag, dir, registry, sp, token, tenant) {
     super(name, "microsoft/azure-cli:latest");
     let imgName = img + ":" + tag;
     this.env = {
       AZURE_CONTAINER_REGISTRY: registry,
+      ACR_SERVICE_PRINCIPAL: sp,
       ACR_TOKEN: token,
       ACR_TENANT: tenant,
     }
     this.tasks = [
       // Create a service principal and assign it proper perms on the container registry.
-      `az login --service-principal -u $AZURE_CONTAINER_REGISTRY -p $ACR_TOKEN --tenant $ACR_TENANT`,
+      `az login --service-principal -u $ACR_SERVICE_PRINCIPAL -p $ACR_TOKEN --tenant $ACR_TENANT`,
       `cd ${dir}`,
-      `echo '========> building ${img}...'`,
-      `az acr build -r ${registry} -t ${imgName} .`,
-      `echo '<======== finished building ${img}.'`
+      `echo '========> building ${imgName}...'`,
+      `az acr build -r $AZURE_CONTAINER_REGISTRY -t ${imgName} .`,
+      `echo '<======== finished building ${imgName}.'`
     ];
   }
 }
@@ -67,8 +68,8 @@ events.on("push", (e, project) => {
   if (gh.ref.startsWith("refs/tags/") || gh.ref == "refs/heads/master") {
     let parts = gh.ref.split("/", 3);
     let tag = parts[2];
-    var releaser = new ACRBuildJob(`${projectName}-release`, projectName, tag, "/src", project.secrets.acrName, project.secrets.acrToken, project.secrets.acrTenant);
-    var latestReleaser = new ACRBuildJob(`${projectName}-release-latest`, projectName, "latest", "/src", project.secrets.acrName, project.secrets.acrToken, project.secrets.acrTenant);
+    var releaser = new ACRBuildJob(`${projectName}-release`, projectName, tag, "/src", project.secrets.acrName, project.secrets.acrServicePrincipalID, project.secrets.acrServicePrincipalToken, project.secrets.acrServicePrincipalTenant);
+    var latestReleaser = new ACRBuildJob(`${projectName}-release-latest`, projectName, "latest", "/src", project.secrets.acrName, project.secrets.acrServicePrincipalID, project.secrets.acrServicePrincipalToken, project.secrets.acrServicePrincipalTenant);
     Group.runAll([start, releaser, latestReleaser])
       .catch(err => {
         return ghNotify("failure", `failed build ${e.buildID}`, e, project).run()
@@ -96,7 +97,7 @@ function checkRequested(e, p) {
   }
 
   var tester = new TestJob(`${projectName}-test`)
-  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", p.secrets.acrName, p.secrets.acrToken, p.secrets.acrTenant);
+  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", p.secrets.acrName, p.secrets.acrServicePrincipalID, p.secrets.acrServicePrincipalToken, p.secrets.acrServicePrincipalTenant);
 
   // For convenience, we'll create three jobs: one for each GitHub Check
   // stage.
