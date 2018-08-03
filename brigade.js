@@ -103,7 +103,7 @@ function checkRequested(e, p) {
   const startTester = new Job("start-test-run", checkRunImage)
   startTester.env = env
   startTester.env.CHECK_NAME = "Unit Tests"
-  startReleaser.env.CHECK_SUMMARY = "In progress, please wait..."
+  startTester.env.CHECK_SUMMARY = "In progress, please wait..."
 
   const endTester = new Job("end-test-run", checkRunImage)
   endTester.env = env
