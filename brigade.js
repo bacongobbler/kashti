@@ -68,8 +68,8 @@ events.on("push", (e, project) => {
   if (gh.ref.startsWith("refs/tags/") || gh.ref == "refs/heads/master") {
     let parts = gh.ref.split("/", 3);
     let tag = parts[2];
-    var releaser = new ACRBuildJob(`${projectName}-release`, projectName, tag, "/src", project.secrets.acrName, project.secrets.acrServicePrincipalID, project.secrets.acrServicePrincipalToken, project.secrets.acrServicePrincipalTenant);
-    var latestReleaser = new ACRBuildJob(`${projectName}-release-latest`, projectName, "latest", "/src", project.secrets.acrName, project.secrets.acrServicePrincipalID, project.secrets.acrServicePrincipalToken, project.secrets.acrServicePrincipalTenant);
+    var releaser = new ACRBuildJob(`${projectName}-release`, projectName, tag, "/src", project.secrets.acrName, project.secrets.acrServicePrincipalName, project.secrets.acrServicePrincipalToken, project.secrets.acrServicePrincipalTenant);
+    var latestReleaser = new ACRBuildJob(`${projectName}-release-latest`, projectName, "latest", "/src", project.secrets.acrName, project.secrets.acrServicePrincipalName, project.secrets.acrServicePrincipalToken, project.secrets.acrServicePrincipalTenant);
     Group.runAll([start, releaser, latestReleaser])
       .catch(err => {
         return ghNotify("failure", `failed build ${e.buildID}`, e, project).run()
@@ -97,7 +97,7 @@ function checkRequested(e, p) {
   }
 
   var tester = new TestJob(`${projectName}-test`)
-  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", p.secrets.acrName, p.secrets.acrServicePrincipalID, p.secrets.acrServicePrincipalToken, p.secrets.acrServicePrincipalTenant);
+  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", p.secrets.acrName, p.secrets.acrServicePrincipalName, p.secrets.acrServicePrincipalToken, p.secrets.acrServicePrincipalTenant);
 
   // For convenience, we'll create three jobs: one for each GitHub Check
   // stage.
