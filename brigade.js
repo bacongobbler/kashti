@@ -121,7 +121,7 @@ function checkRequested(e, p) {
     end.env.CHECK_CONCLUSION = "failure"
     end.env.CHECK_SUMMARY = "Build failed"
     end.env.CHECK_TEXT = `${err}`
-    return end.run()
+    end.run()
   }
 
   start.env.CHECK_TITLE = "Build Docker image"
@@ -140,7 +140,7 @@ function checkRequested(e, p) {
     end.env.CHECK_CONCLUSION = "failure"
     end.env.CHECK_SUMMARY = "Build failed"
     end.env.CHECK_TEXT = `${err}`
-    return end.run()
+    end.run()
   }
 }
 
