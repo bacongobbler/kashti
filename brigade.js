@@ -102,12 +102,10 @@ function checkRequested(e, p) {
   // For convenience, we'll create three jobs: one for each GitHub Check
   // stage.
   const start = new Job("start-run", checkRunImage)
-  start.imageForcePull = true
   start.env = env
   start.env.CHECK_SUMMARY = "Beginning test run"
 
   const end = new Job("end-run", checkRunImage)
-  end.imageForcePull = true
   end.env = env
 
   // Now we run the jobs in order:
