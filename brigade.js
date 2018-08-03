@@ -92,7 +92,7 @@ function checkRequested(e, p) {
   // Common configuration
   const env = {
     CHECK_PAYLOAD: e.payload,
-    CHECK_NAME: "Chart Tester",
+    CHECK_TITLE: "Results"
   }
 
   var tester = new TestJob(`${projectName}-test`)
@@ -102,8 +102,8 @@ function checkRequested(e, p) {
   // stage.
   const startTester = new Job("start-test-run", checkRunImage)
   startTester.env = env
-  startTester.env.CHECK_TITLE = "Unit tests"
-  startTester.env.CHECK_SUMMARY = "Beginning test run"
+  startTester.env.CHECK_NAME = "Unit Tests"
+  startReleaser.env.CHECK_SUMMARY = "In progress, please wait..."
 
   const endTester = new Job("end-test-run", checkRunImage)
   endTester.env = env
@@ -111,8 +111,8 @@ function checkRequested(e, p) {
 
   const startReleaser = new Job("start-release-run", checkRunImage)
   startReleaser.env = env
-  startReleaser.env.CHECK_TITLE = "Docker image tests"
-  startReleaser.env.CHECK_SUMMARY = "Beginning test run"
+  startReleaser.env.CHECK_NAME = "Docker Image Tests"
+  startReleaser.env.CHECK_SUMMARY = "In progress, please wait..."
 
   const endRelease = new Job("end-release-run", checkRunImage)
   endRelease.env = env
