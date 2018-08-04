@@ -95,59 +95,32 @@ function checkRequested(e, p) {
     CHECK_TITLE: "Results"
   }
 
+  const start = new Job("start-test-run", checkRunImage)
+  start.env = env
+  start.env.CHECK_NAME = "Unit Tests"
+  start.env.CHECK_SUMMARY = "In progress, please wait..."
+
+  const end = new Job("end-test-run", checkRunImage)
+  end.env = env
+  end.env.CHECK_NAME = start.env.CHECK_NAME
+
   var tester = new TestJob(`${projectName}-test`)
   var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", p.secrets.acrName, p.secrets.acrServicePrincipalName, p.secrets.acrServicePrincipalToken, p.secrets.acrServicePrincipalTenant);
 
-  // For convenience, we'll create three jobs: one for each GitHub Check
-  // stage.
-  const startTester = new Job("start-test-run", checkRunImage)
-  startTester.env = env
-  startTester.env.CHECK_NAME = "Unit Tests"
-  startTester.env.CHECK_SUMMARY = "In progress, please wait..."
 
-  const endTester = new Job("end-test-run", checkRunImage)
-  endTester.env = env
-  endTester.env.CHECK_NAME = startTester.env.CHECK_NAME
-  endTester.env.CHECK_TITLE = startTester.env.CHECK_TITLE
-
-  const startReleaser = new Job("start-release-run", checkRunImage)
-  startReleaser.env = env
-  startReleaser.env.CHECK_NAME = "Docker Image Tests"
-  startReleaser.env.CHECK_SUMMARY = "In progress, please wait..."
-
-  const endReleaser = new Job("end-release-run", checkRunImage)
-  endReleaser.env = env
-  endReleaser.env.CHECK_NAME = startReleaser.env.CHECK_NAME
-  endReleaser.env.CHECK_TITLE = startReleaser.env.CHECK_TITLE
-
-  Group.runEach([startTester, tester])
+  Group.runAll([start, tester, releaser])
     .then((result) => {
-      endTester.env.CHECK_CONCLUSION = "success"
-      endTester.env.CHECK_SUMMARY = "Build completed"
-      endTester.env.CHECK_TEXT = result.toString()
-      endTester.run()
+      end.env.CHECK_CONCLUSION = "success"
+      end.env.CHECK_SUMMARY = "Build completed"
+      end.env.CHECK_TEXT = result.toString()
+      end.run()
     })
     .catch((err) => {
       // In this case, we mark the ending failed.
-      endTester.env.CHECK_CONCLUSION = "failure"
-      endTester.env.CHECK_SUMMARY = "Build failed"
-      endTester.env.CHECK_TEXT = `${err}`
-      endTester.run()
-    })
-
-  Group.runEach([startReleaser, releaser])
-    .then((result) => {
-      endReleaser.env.CHECK_CONCLUSION = "success"
-      endReleaser.env.CHECK_SUMMARY = "Build completed"
-      endReleaser.env.CHECK_TEXT = result.toString()
-      endReleaser.run()
-    })
-    .catch((err) => {
-      // In this case, we mark the ending failed.
-      endReleaser.env.CHECK_CONCLUSION = "failure"
-      endReleaser.env.CHECK_SUMMARY = "Build failed"
-      endReleaser.env.CHECK_TEXT = `${err}`
-      endReleaser.run()
+      end.env.CHECK_CONCLUSION = "failure"
+      end.env.CHECK_SUMMARY = "Build failed"
+      end.env.CHECK_TEXT = `${err}`
+      end.run()
     })
 }
 
