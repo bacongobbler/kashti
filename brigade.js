@@ -9,6 +9,7 @@ class TestJob extends Job {
     this.tasks = [
       "cd /src",
       "yarn install",
+      "yarn global add @angular/cli",
       "ng lint",
       "ng test --single-run",
     ];
@@ -21,27 +22,29 @@ class E2eJob extends Job {
     this.tasks = [
       "cd /src",
       "yarn install",
+      "yarn global add @angular/cli",
       "ng e2e"
     ];
   }
 }
 
 class ACRBuildJob extends Job {
-  constructor(name, img, tag, dir, registry, token, tenant) {
+  constructor(name, img, tag, dir, registry, sp, token, tenant) {
     super(name, "microsoft/azure-cli:latest");
     let imgName = img + ":" + tag;
     this.env = {
       AZURE_CONTAINER_REGISTRY: registry,
+      ACR_SERVICE_PRINCIPAL: sp,
       ACR_TOKEN: token,
       ACR_TENANT: tenant,
     }
     this.tasks = [
       // Create a service principal and assign it proper perms on the container registry.
-      `az login --service-principal -u $AZURE_CONTAINER_REGISTRY -p $ACR_TOKEN --tenant $ACR_TENANT`,
+      `az login --service-principal -u $ACR_SERVICE_PRINCIPAL -p $ACR_TOKEN --tenant $ACR_TENANT`,
       `cd ${dir}`,
-      `echo '========> building ${img}...'`,
-      `az acr build -r ${registry} -t ${imgName} .`,
-      `echo '<======== finished building ${img}.'`
+      `echo '========> building ${imgName}...'`,
+      `az acr build -r $AZURE_CONTAINER_REGISTRY -t ${imgName} .`,
+      `echo '<======== finished building ${imgName}.'`
     ];
   }
 }
@@ -65,8 +68,8 @@ events.on("push", (e, project) => {
   if (gh.ref.startsWith("refs/tags/") || gh.ref == "refs/heads/master") {
     let parts = gh.ref.split("/", 3);
     let tag = parts[2];
-    var releaser = new ACRBuildJob(`${projectName}-release`, projectName, tag, "/src", project.secrets.acrName, project.secrets.acrToken, project.secrets.acrTenant);
-    var latestReleaser = new ACRBuildJob(`${projectName}-release-latest`, projectName, "latest", "/src", project.secrets.acrName, project.secrets.acrToken, project.secrets.acrTenant);
+    var releaser = new ACRBuildJob(`${projectName}-release`, projectName, tag, "/src", project.secrets.acrName, project.secrets.acrServicePrincipalName, project.secrets.acrServicePrincipalToken, project.secrets.acrServicePrincipalTenant);
+    var latestReleaser = new ACRBuildJob(`${projectName}-release-latest`, projectName, "latest", "/src", project.secrets.acrName, project.secrets.acrServicePrincipalName, project.secrets.acrServicePrincipalToken, project.secrets.acrServicePrincipalTenant);
     Group.runAll([start, releaser, latestReleaser])
       .catch(err => {
         return ghNotify("failure", `failed build ${e.buildID}`, e, project).run()
@@ -85,52 +88,44 @@ function test() {
 
 function checkRequested(e, p) {
   console.log("check requested")
-  console.log(e.payload)
+  const gh = JSON.parse(e.payload);
   // Common configuration
   const env = {
     CHECK_PAYLOAD: e.payload,
-    CHECK_NAME: "Chart Tester",
-    CHECK_TITLE: "Lint all Helm Charts",
+    CHECK_TITLE: "Results"
   }
 
-  var tester = new TestJob(`${projectName}-test`)
-  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, tag, "/src", project.secrets.acrName, project.secrets.acrToken, project.secrets.acrTenant);
-
-  // For convenience, we'll create three jobs: one for each GitHub Check
-  // stage.
-  const start = new Job("start-run", checkRunImage)
-  start.imageForcePull = true
+  const start = new Job("start-test-run", checkRunImage)
   start.env = env
-  start.env.CHECK_SUMMARY = "Beginning test run"
+  start.env.CHECK_NAME = "Unit Tests"
+  start.env.CHECK_SUMMARY = "In progress, please wait..."
 
-  const end = new Job("end-run", checkRunImage)
-  end.imageForcePull = true
+  const end = new Job("end-test-run", checkRunImage)
   end.env = env
+  end.env.CHECK_NAME = start.env.CHECK_NAME
 
-  // Now we run the jobs in order:
-  // - Notify GitHub of start
-  // - Run the test
-  // - Notify GitHub of completion
-  //
-  // On error, we catch the error and notify GitHub of a failure.
-  start.run().then(() => {
-    return tester.run()
-  }).then((result) => {
-    end.env.CHECK_CONCLUSION = "success"
-    end.env.CHECK_SUMMARY = "Build completed"
-    end.env.CHECK_TEXT = result.toString()
-    return end.run()
-  }).catch((err) => {
-    // In this case, we mark the ending failed.
-    end.env.CHECK_CONCLUSION = "failed"
-    end.env.CHECK_SUMMARY = "Build failed"
-    end.env.CHECK_TEXT = `Error: ${err}`
-    return end.run()
-  })
+  var tester = new TestJob(`${projectName}-test`)
+  var releaser = new ACRBuildJob(`${projectName}-test-release`, projectName, `git-${gh.body.check_suite.head_sha.substring(0, 7)}`, "/src", p.secrets.acrName, p.secrets.acrServicePrincipalName, p.secrets.acrServicePrincipalToken, p.secrets.acrServicePrincipalTenant);
+
+
+  Group.runAll([start, tester, releaser])
+    .then((result) => {
+      end.env.CHECK_CONCLUSION = "success"
+      end.env.CHECK_SUMMARY = "Build completed"
+      end.env.CHECK_TEXT = result.toString()
+      end.run()
+    })
+    .catch((err) => {
+      // In this case, we mark the ending failed.
+      end.env.CHECK_CONCLUSION = "failure"
+      end.env.CHECK_SUMMARY = "Build failed"
+      end.env.CHECK_TEXT = `${err}`
+      end.run()
+    })
 }
 
 events.on("exec", test);
-
 events.on("check_suite:requested", checkRequested);
 events.on("check_suite:rerequested", checkRequested);
 events.on("check_run:rerequested", checkRequested);
+console.log('hit me baby one more time!')
