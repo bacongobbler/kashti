@@ -3,7 +3,6 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
 import { BRIGADE_API_HOST } from '../../app.config';
 import { Build } from '../../models/build';
-import { BuildLog } from '../../models/build-log';
 import { BuildService } from './build.service';
 
 const httpOptions = {
@@ -28,11 +27,10 @@ export class ApiBuildService implements BuildService {
       .get<Build>(buildUrl, httpOptions);
   }
 
-  getBuildLog(buildId): Observable<BuildLog> {
+  getBuildLog(buildId): Observable<string> {
     const buildlogUrl = `${BRIGADE_API_HOST}/v1/build/${buildId}/logs?stream=true`;
     const options = { responseType: 'text' as 'json' };
 
-    return this.http
-      .get<BuildLog>(buildlogUrl, options);
+    return this.http.get<string>(buildlogUrl, options);
   }
 }

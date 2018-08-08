@@ -1,6 +1,5 @@
 import { Observable } from 'rxjs/Observable';
-import { Log } from '../../models/log';
 
 export abstract class LogService {
-  abstract getLog(jobId: string): Observable<Log>;
+  abstract getLog(jobId: string): Observable<string>;
 }

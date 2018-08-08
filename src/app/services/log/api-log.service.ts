@@ -2,7 +2,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
 import { BRIGADE_API_HOST } from '../../app.config';
-import { Log } from '../../models/log';
 import { LogService } from './log.service';
 
 const httpOptions = {
@@ -14,11 +13,10 @@ const httpOptions = {
 export class ApiLogService implements LogService {
   constructor(private http: HttpClient) { }
 
-  getLog(jobId): Observable<Log> {
+  getLog(jobId): Observable<string> {
     const logUrl = `${BRIGADE_API_HOST}/v1/job/${jobId}/logs?stream=true`;
     const options = { responseType: 'text' as 'json' };
 
-    return this.http
-      .get<Log>(logUrl, options);
+    return this.http.get<string>(logUrl);
   }
 }
